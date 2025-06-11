@@ -3,8 +3,43 @@
 const program = require('commander');
 const logger = require('./lib/utils/logger');
 const version = require('./package.json').version;
-const errorHandler = function (error) {
+
+// Handle uncaught exceptions and promise rejections
+process.on('uncaughtException', (error) => {
+    logger.error('💥 Uncaught Exception:');
     logger.error(error);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+    logger.error('💥 Unhandled Promise Rejection:');
+    logger.error(reason);
+    process.exit(1);
+});
+const errorHandler = async function (error) {
+    // Ensure error output is flushed before exiting
+    logger.error(error);
+
+    // Force flush stdout/stderr buffers
+    await new Promise((resolve) => {
+        if (process.stdout.write('')) {
+            resolve();
+        } else {
+            process.stdout.once('drain', resolve);
+        }
+    });
+
+    await new Promise((resolve) => {
+        if (process.stderr.write('')) {
+            resolve();
+        } else {
+            process.stderr.once('drain', resolve);
+        }
+    });
+
+    // Add small delay to ensure consola logger flushes
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     process.exit(1);
 };
 
